@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace PegLeg
@@ -19,6 +20,28 @@ namespace PegLeg
             return Sequence(firstLetter, otherLetters)(input);
         }
 
+        private Func<ReadOnlyMemory<char>, ParseResult?> PositiveLookahead(Func<ReadOnlyMemory<char>, ParseResult?> child)
+        {
+            return input =>
+            {
+                var result = child(input);
+                if (result == null)
+                    return ParseResult.Fail();
+                return ParseResult.Empty(input);
+            };
+        }
+
+        private Func<ReadOnlyMemory<char>, ParseResult?> NegativeLookahead(Func<ReadOnlyMemory<char>, ParseResult?> child)
+        {
+            return input =>
+            {
+                var result = child(input);
+                if (result == null)
+                    return ParseResult.Empty(input);
+                return ParseResult.Fail();
+            };
+        }
+
         private Func<ReadOnlyMemory<char>, ParseResult?> Sequence(params Func<ReadOnlyMemory<char>, ParseResult?>[] children)
         {
             return input =>
@@ -29,13 +52,27 @@ namespace PegLeg
                     var childInput = input.Slice(offset);
                     var childResult = child(childInput);
                     if (childResult == null)
-                        return null;
+                        return ParseResult.Fail();
                     offset += childResult.Value.Memory.Length;
                 }
 
-                return new ParseResult { Memory = input.Slice(0, offset) };
+                return ParseResult.Create(input, offset);
             };
         }
+
+        private Func<ReadOnlyMemory<char>, ParseResult?> Optional(Func<ReadOnlyMemory<char>, ParseResult?> child)
+        {
+            return input =>
+            {
+                var result = child(input);
+                if (result != null)
+                    return result;
+
+                return ParseResult.Empty(input);
+            };
+        }
+
+        private Func<ReadOnlyMemory<char>, ParseResult?> Plus(Func<ReadOnlyMemory<char>, ParseResult?> child) => Sequence(child, Star(child));
 
         private Func<ReadOnlyMemory<char>, ParseResult?> Star(Func<ReadOnlyMemory<char>, ParseResult?> child)
         {
@@ -50,6 +87,50 @@ namespace PegLeg
                         break;
                     offset += childResult.Value.Memory.Length;
                 }
+
+                return ParseResult.Create(input, offset);
+            };
+        }
+
+        private Func<ReadOnlyMemory<char>, ParseResult?> Quantify(Func<ReadOnlyMemory<char>, ParseResult?> child, int min, int? inclusiveMax, Func<ReadOnlyMemory<char>, ParseResult?>? delimiter)
+        {
+            if (min == 0 && inclusiveMax == 1)
+                return Optional(child);
+            if (delimiter == null && min == 0 && inclusiveMax == null)
+                return Star(child);
+            if (delimiter == null && min == 1 && inclusiveMax == null)
+                return Plus(child);
+            if (delimiter == null && inclusiveMax != null && min == inclusiveMax)
+                return Sequence(Enumerable.Repeat(child, min).ToArray());
+
+            return input =>
+            {
+                var offset = 0;
+                var count = 0;
+                while (inclusiveMax == null || count < inclusiveMax.Value)
+                {
+                    var offsetBeforeDelimiter = offset;
+                    if (delimiter != null && count != 0)
+                    {
+                        var delimiterResult = delimiter(input.Slice(offset));
+                        if (delimiterResult == null)
+                            break;
+                        offset += delimiterResult.Value.Memory.Length;
+                    }
+
+                    var childInput = input.Slice(offset);
+                    var childResult = child(childInput);
+                    if (childResult == null)
+                    {
+                        offset = offsetBeforeDelimiter;
+                        break;
+                    }
+
+                    offset += childResult.Value.Memory.Length;
+                }
+
+                if (count < min)
+                    return null;
 
                 return new ParseResult { Memory = input.Slice(0, offset) };
             };
@@ -70,37 +151,65 @@ namespace PegLeg
             };
         }
 
-        private ParseResult? LowercaseLetter(ReadOnlyMemory<char> input) => CharacterRange(input, 'a', 'z');
-        private ParseResult? UppercaseLetter(ReadOnlyMemory<char> input) => CharacterRange(input, 'A', 'Z');
-        private ParseResult? Digit(ReadOnlyMemory<char> input) => CharacterRange(input, '0', '9');
+        private ParseResult? LowercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('a', 'z')(input);
+        private ParseResult? UppercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('A', 'Z')(input);
+        private ParseResult? Digit(ReadOnlyMemory<char> input) => CharacterRange('0', '9')(input);
 
-        private ParseResult? CharacterRange(ReadOnlyMemory<char> input, char begin, char inclusiveEnd)
+        private Func<ReadOnlyMemory<char>, ParseResult?> CharacterRange(char begin, char inclusiveEnd)
         {
-            if (input.Length == 0)
-                return null;
-            var span = input.Span;
-            if (span[0] >= begin && span[0] <= inclusiveEnd)
-                return new ParseResult() { Memory = input.Slice(0, 1) };
+            return input =>
+            {
+                if (input.Length == 0)
+                    return null;
+                var span = input.Span;
+                if (span[0] >= begin && span[0] <= inclusiveEnd)
+                    return new ParseResult() { Memory = input.Slice(0, 1) };
 
-            return null;
+                return null;
+            };
         }
 
-        private ParseResult? Underscore(ReadOnlyMemory<char> input) => ExactString(input, "_", caseInsensitive: false);
+        private ParseResult? Underscore(ReadOnlyMemory<char> input) => ExactString("_", caseInsensitive: false)(input);
 
-        private ParseResult? ExactString(ReadOnlyMemory<char> input, string test, bool caseInsensitive)
+        private Func<ReadOnlyMemory<char>, ParseResult?> ExactString(string test, bool caseInsensitive)
         {
-            if (input.Length == 0)
-                return null;
-            var span = input.Span;
-            if (span.StartsWith(test.AsSpan(), caseInsensitive ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture))
-                return new ParseResult() { Memory = input.Slice(0, test.Length) };
+            var comparison = caseInsensitive ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture;
+            return input =>
+            {
+                var inputSpan = input.Span;
+                var testSpan = test.AsSpan();
+                if (inputSpan.StartsWith(testSpan, comparison))
+                    return new ParseResult() { Memory = input.Slice(0, testSpan.Length) };
 
-            return null;
+                return null;
+            };
+        }
+
+        private Func<ReadOnlyMemory<char>, ParseResult?> AnyChar()
+        {
+            return input =>
+            {
+                if (input.Length == 0)
+                    return null;
+                return new ParseResult { Memory = input.Slice(0, 1) };
+            };
         }
 
         public readonly struct ParseResult
         {
             public readonly ReadOnlyMemory<char> Memory { get; init; }
+
+            public static ParseResult? Fail() => null;
+            public static ParseResult Create(ReadOnlyMemory<char> memory, int length) => new() { Memory = memory.Slice(0, length) };
+            public static ParseResult Empty(ReadOnlyMemory<char> memory) => Create(memory, 0);
         }
+
+        public readonly struct ParseResult<T>
+        {
+            public readonly ReadOnlyMemory<char> Memory { get; init; }
+            public readonly T Value { get; init; }
+        }
+
+        public readonly struct Unit { }
     }
 }
