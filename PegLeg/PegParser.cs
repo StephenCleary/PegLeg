@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -208,6 +209,12 @@ namespace PegLeg
             };
         }
 
+        public readonly struct ParseState
+        {
+            public readonly ReadOnlyMemory<char> Memory { get; init; }
+            public readonly ImmutableDictionary<string, dynamic> State { get; init; }
+        }
+
         public readonly struct ParseResult
         {
             public readonly ReadOnlyMemory<char> Memory { get; init; }
@@ -221,6 +228,28 @@ namespace PegLeg
         {
             public readonly ReadOnlyMemory<char> Memory { get; init; }
             public readonly T Value { get; init; }
+
+            public static ParseResult<T>? Fail() => null;
+            public static ParseResult<T> Create(ParseState state, int length, Func<ParseState, ReadOnlyMemory<char>, T> getValue)
+            {
+                var memory = state.Memory.Slice(0, length);
+                return new()
+                {
+                    Memory = memory,
+                    Value = getValue(state, memory),
+                };
+            }
+            public static ParseResult<T> Empty(ParseState state, Func<ParseState, ReadOnlyMemory<char>, T> getValue) => Create(state, 0, getValue);
+            public static ParseResult<ReadOnlyMemory<char>> Create(ParseState state, int length)
+            {
+                var memory = state.Memory.Slice(0, length);
+                return new()
+                {
+                    Memory = memory,
+                    Value = memory,
+                };
+            }
+            public static ParseResult<ReadOnlyMemory<char>> Empty(ParseState state) => Create(state, 0);
         }
 
         public readonly struct Unit { }
