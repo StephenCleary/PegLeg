@@ -130,9 +130,9 @@ namespace PegLeg
                 }
 
                 if (count < min)
-                    return null;
+                    return ParseResult.Fail();
 
-                return new ParseResult { Memory = input.Slice(0, offset) };
+                return ParseResult.Create(input, offset);
             };
         }
 
@@ -147,7 +147,7 @@ namespace PegLeg
                         return result;
                 }
 
-                return null;
+                return ParseResult.Fail();
             };
         }
 
@@ -160,12 +160,12 @@ namespace PegLeg
             return input =>
             {
                 if (input.Length == 0)
-                    return null;
+                    return ParseResult.Fail();
                 var span = input.Span;
                 if (span[0] >= begin && span[0] <= inclusiveEnd)
-                    return new ParseResult() { Memory = input.Slice(0, 1) };
+                    return ParseResult.Create(input, 1);
 
-                return null;
+                return ParseResult.Fail();
             };
         }
 
@@ -179,9 +179,9 @@ namespace PegLeg
                 var inputSpan = input.Span;
                 var testSpan = test.AsSpan();
                 if (inputSpan.StartsWith(testSpan, comparison))
-                    return new ParseResult() { Memory = input.Slice(0, testSpan.Length) };
+                    return ParseResult.Create(input, testSpan.Length);
 
-                return null;
+                return ParseResult.Fail();
             };
         }
 
@@ -190,8 +190,8 @@ namespace PegLeg
             return input =>
             {
                 if (input.Length == 0)
-                    return null;
-                return new ParseResult { Memory = input.Slice(0, 1) };
+                    return ParseResult.Fail();
+                return ParseResult.Create(input, 1);
             };
         }
 
