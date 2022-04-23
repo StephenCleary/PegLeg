@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PegLeg
 {
@@ -182,6 +183,19 @@ namespace PegLeg
                     return ParseResult.Create(input, testSpan.Length);
 
                 return ParseResult.Fail();
+            };
+        }
+
+        private Func<ReadOnlyMemory<char>, ParseResult?> Regex(string test, RegexOptions options)
+        {
+            var regex = new Regex($"^{test}", options);
+            return input =>
+            {
+                var inputSpan = input.Span;
+                var match = regex.Match(input.ToString()); // TODO: EnumerateMatches in .NET 7
+                if (!match.Success)
+                    return ParseResult.Fail();
+                return ParseResult.Create(input, match.Length);
             };
         }
 
