@@ -11,14 +11,19 @@ namespace PegLeg
         public ParseResult? TryParse(ReadOnlyMemory<char> input)
         {
             return Identifier(input);
-        }
 
-        private ParseResult? Identifier(ReadOnlyMemory<char> input)
-        {
-            // (LowercaseLetter / UppercaseLetter / Underscore) (LowercaseLetter / UppercaseLetter / Underscore / Digit)*
-            var firstLetter = Choice(LowercaseLetter, UppercaseLetter, Underscore);
-            var otherLetters = Star(Choice(LowercaseLetter, UppercaseLetter, Underscore, Digit));
-            return Sequence(firstLetter, otherLetters)(input);
+            ParseResult? Identifier(ReadOnlyMemory<char> input)
+            {
+                // (LowercaseLetter / UppercaseLetter / Underscore) (LowercaseLetter / UppercaseLetter / Underscore / Digit)*
+                var firstLetter = Choice(LowercaseLetter, UppercaseLetter, Underscore);
+                var otherLetters = Star(Choice(LowercaseLetter, UppercaseLetter, Underscore, Digit));
+                return Sequence(firstLetter, otherLetters)(input);
+            }
+
+            ParseResult? LowercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('a', 'z')(input);
+            ParseResult? UppercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('A', 'Z')(input);
+            ParseResult? Digit(ReadOnlyMemory<char> input) => CharacterRange('0', '9')(input);
+            ParseResult? Underscore(ReadOnlyMemory<char> input) => ExactString("_", caseInsensitive: false)(input);
         }
 
         private Func<ReadOnlyMemory<char>, ParseResult?> PositiveLookahead(Func<ReadOnlyMemory<char>, ParseResult?> child)
@@ -152,10 +157,6 @@ namespace PegLeg
             };
         }
 
-        private ParseResult? LowercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('a', 'z')(input);
-        private ParseResult? UppercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('A', 'Z')(input);
-        private ParseResult? Digit(ReadOnlyMemory<char> input) => CharacterRange('0', '9')(input);
-
         private Func<ReadOnlyMemory<char>, ParseResult?> CharacterRange(char begin, char inclusiveEnd)
         {
             return input =>
@@ -169,8 +170,6 @@ namespace PegLeg
                 return ParseResult.Fail();
             };
         }
-
-        private ParseResult? Underscore(ReadOnlyMemory<char> input) => ExactString("_", caseInsensitive: false)(input);
 
         private Func<ReadOnlyMemory<char>, ParseResult?> ExactString(string test, bool caseInsensitive)
         {
