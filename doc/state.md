@@ -30,7 +30,7 @@ Problems with V-PEG:
 
 # Proposed solution
 
-There are three types of state (what V-PEG calls "environments"): `backref` (a simpler form of V-PEG's `match` environment), `set` (equivalent to V-PEG's `exists` environment), and `bool` (not present in V-PEG).
+There are three types of state (what V-PEG calls "environments"): `backref` (a simpler form of V-PEG's `match` environment), `set` (equivalent to a properly-scoped, non-memoized V-PEG's `exists` environment), and `bool` (not present in V-PEG).
 
 Proposed syntax and semantics, where `name` is a name identifier, `e` is an expression (TODO: possibly restrained from some state operations), and `c` is a code block.
 
@@ -81,4 +81,27 @@ Note: you can invert the logic by using a standard `!`, e.g., `!#?name?` will fa
 ## Memoization notes and open issues
 
 - V-PEG doesn't include the `exists` environment (Set State) in memoization at all. I'm not sure if that's correct if `scope` is used with backtracking.
+  - Turns out they globally memoize `exists`, which makes it less than useful and makes the `scope` semantics potentially extremely confusing, since `exists` may or may not be called on various branches within a `scope`. See below.
 - For Backref and Bool State, we can "flatten" the state so that only the most-recent values for each name are present (similar to V-PEG).
+
+Example grammar showing confusion around `exists` with `scope`; the following will succeed in matching the *complete* input `xx`:
+
+```
+a: scope(b) / scope(d)
+b: binde(decls,identifier) c !''
+c: exists(decls,identifier)
+d: binde(decls,'') identifier c
+identifier: 'x'
+```
+
+The equivalent PegLeg grammar behaves in a more expected fashion, matching only the first `x` in `xx`:
+
+```
+a: #~(b) / #~(d)
+b: #~decls+=identifier c !''
+c: #~decls?identifier
+d: #~decls+='' identifier c
+identifier: 'x'
+```
+
+However, in order to do this, it must include the entire set state in its memoization.
