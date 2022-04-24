@@ -89,6 +89,8 @@ Note: you can invert the logic by using a standard `!`, e.g., `!#?name?` will fa
 - V-PEG doesn't include the `exists` environment (Set State) in memoization at all. I'm not sure if that's correct if `scope` is used with backtracking.
   - Turns out they globally memoize `exists`, which makes it less than useful and makes the `scope` semantics potentially extremely confusing, since `exists` may or may not be called on various branches within a `scope`. See below.
 - For Backref and Bool State, we can "flatten" the state so that only the most-recent values for each name are present (similar to V-PEG).
+- Comparing strings: variable names are a finite set and can be `static` instances compared by reference.
+- The state doesn't actually need to be stored. For a sufficiently good hash (e.g., SHA1), storing the *hash* of the state is sufficient. This effectively removes the environment part of the space requirements of packrat parsers, at the cost of updating/recalculating hashes on state changes.
 
 Example grammar showing confusion around `exists` with `scope`; the following will succeed in matching the *complete* input `xx`:
 
