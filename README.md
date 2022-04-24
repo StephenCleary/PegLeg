@@ -1,6 +1,13 @@
 # PegLeg
 A PEG parser for C#, using code generators
 
+# Goals
+
+- Support *maintainable* grammars as much as possible. Do everything possible so that grammar maintainers don't have to change their grammar at all due to parser generator limitations.
+- Work exclusively on `ReadOnlyMemory<char>` instead of strings and substrings.
+- Implementation as a code generator: consumers define a `.peg` file and we generate the parser code on build with full cross-platform support.
+- Be reasonably efficient, both in terms of memory usage and execution speed.
+
 ## Doc links
 
 [TatSu](https://tatsu.readthedocs.io/en/stable/) has great docs. Note that TatSu [specifically disallows semantic actions](https://tatsu.readthedocs.io/en/stable/semantics.html), which in turn prevents code-based matching.
