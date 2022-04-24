@@ -45,10 +45,10 @@ Use cases:
 
 Syntax:
 
-`#\name=e` - Set the backref `name` to the result of evaluating `e`.
-`#\name` - Match the literal string consumed by the `e` for `name`. The result of this parse is the literal string.
-`#\(e)` - Establish a backref scope. All backrefs set in `e` do not exist outside the scope.
-`#\name{c}` - Take the literal string consumed by the `e` for `name`, pass it through the code `c`, and match the resulting literal string. The result of this parse is the literal string.
+- `#\name=e` - Set the backref `name` to the result of evaluating `e`.
+- `#\name` - Match the literal string consumed by the `e` for `name`. The result of this parse is the literal string.
+- `#\(e)` - Establish a backref scope. All backrefs set in `e` do not exist outside the scope.
+- `#\name{c}` - Take the literal string consumed by the `e` for `name`, pass it through the code `c`, and match the resulting literal string. The result of this parse is the literal string.
 
 `ImmutableDictionary<string, string>`
 
@@ -61,9 +61,9 @@ Use cases:
 
 Syntax:
 
-`#~name+=e` - Add the result of evaluating `e` to the set `name`. This is a set operation, so this is ignored if the string value already exists.
-`#~name?e` - Match `e` to the input, and determine if its string value is in `name`. If it is not in `name`, then this parse will fail.
-`#~(e)` - Establish a set scope. All set modifications in `e` do not propagate outside the scope.
+- `#~name+=e` - Add the result of evaluating `e` to the set `name`. This is a set operation, so this is ignored if the string value already exists.
+- `#~name?e` - Match `e` to the input, and determine if its string value is in `name`. If it is not in `name`, then this parse will fail.
+- `#~(e)` - Establish a set scope. All set modifications in `e` do not propagate outside the scope.
 
 `ImmutableDictionary<string, ImmutableHashSet<string>>`
 
@@ -76,9 +76,9 @@ Use cases:
 
 Syntax:
 
-`#?name+(e)` - Establish a bool state scope in which `name` is set.
-`#?name-(e)` - Establish a bool state scope in which `name` is not set. TODO: Not sure if we need this.
-`#?name?` - Zero-width assertion that succeeds if `name` is set and fails if `name` is not set.
+- `#?name+(e)` - Establish a bool state scope in which `name` is set.
+- `#?name-(e)` - Establish a bool state scope in which `name` is not set. TODO: Not sure if we need this.
+- `#?name?` - Zero-width assertion that succeeds if `name` is set and fails if `name` is not set.
 
 Note: you can invert the logic by using a standard `!`, e.g., `!#?name?` will fail if `name` is set and succeed if `name` is not set.
 
