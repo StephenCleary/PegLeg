@@ -30,7 +30,7 @@ Problems with V-PEG:
 
 # Proposed solution
 
-There are three types of state (what V-PEG calls "environments"): `backref` (a simpler form of V-PEG's `match` environment), `set` (equivalent to a properly-scoped, non-memoized V-PEG's `exists` environment), and `bool` (not present in V-PEG).
+There are three types of state (what V-PEG calls "environments"): `backref` (a simpler form of V-PEG's `match` environment), `set` (equivalent to a properly-scoped and memoized V-PEG `exists` environment), and `bool` (not present in V-PEG).
 
 Proposed syntax and semantics, where `name` is a name identifier, `e` is an expression (TODO: possibly restrained from some state operations), and `c` is a code block.
 
