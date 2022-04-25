@@ -50,7 +50,7 @@ Syntax:
 - `#\(e)` - Establish a backref scope. All backrefs set in `e` do not exist outside the scope.
 - `#\name{c}` - Take the literal string consumed by the `e` for `name`, pass it through the code `c`, and match the resulting literal string. The result of this parse is the literal string.
 
-`ImmutableDictionary<string, string>`
+`ImmutableDictionary<VariableName, string>`
 
 ## Set State
 
@@ -65,7 +65,7 @@ Syntax:
 - `#~name?e` - Match `e` to the input, and determine if its string value is in `name`. If it is not in `name`, then this parse will fail.
 - `#~(e)` - Establish a set scope. All set modifications in `e` do not propagate outside the scope.
 
-`ImmutableDictionary<string, ImmutableHashSet<string>>`
+`ImmutableDictionary<VariableName, ImmutableHashSet<string>>`
 
 ## Bool State
 
@@ -82,7 +82,7 @@ Syntax:
 
 Note: you can invert the logic by using a standard `!`, e.g., `!#?name?` will fail if `name` is set and succeed if `name` is not set.
 
-`ImmutableHashSet<string>`
+`ImmutableHashSet<VariableName>`
 
 ## Memoization notes and open issues
 
