@@ -6,50 +6,35 @@ using System.Linq;
 namespace PegLeg
 {
     [Generator]
-    public class PegSourceGenerator : ISourceGenerator
+    public class PegSourceGenerator : IIncrementalGenerator
     {
-        public void Execute(GeneratorExecutionContext context)
+        public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-//            var dump = $@"
-//namespace Dump
-//{{
-//    public static class Debug
-//    {{
-//        static public string Data = $""{string.Join(", ", context.AdditionalFiles.Select(x => x.Path))}"";
-//    }}
-//}}
-//";
-//            context.AddSource($"Dump.g.cs", dump);
+            var pegFiles = context.AdditionalTextsProvider
+                .Where(static file => file.Path.EndsWith(".peg", StringComparison.InvariantCultureIgnoreCase))
+                .Select(static (file, cancellationToken) => (Name: Path.GetFileNameWithoutExtension(file.Path), Contents: file.GetText(cancellationToken)))
+                .Where(static x => x.Contents != null);
 
-            foreach (var additionalFile in context.AdditionalFiles.Where(x => x.Path.EndsWith(".peg", StringComparison.InvariantCultureIgnoreCase)))
+            context.RegisterSourceOutput(pegFiles, (sourceProductionContext, pegFile) =>
             {
-                var pegText = additionalFile.GetText();
-                if (pegText == null)
-                    continue;
-
                 var parser = new PegParser();
-                var result = parser.TryParse(pegText.ToString().AsMemory());
+                var result = parser.TryParse(pegFile.Contents!.ToString().AsMemory());
                 var @namespace = "Test";
-                var name = Path.GetFileNameWithoutExtension(additionalFile.Path);
                 var output = $$"""
                     // Auto-generated code
                     using System;
 
                     namespace {{@namespace}}
                     {
-                        public static partial class {{name}}PegParser
+                        public static partial class {{pegFile.Name}}PegParser
                         {
                             static public void HelloFrom(string name) =>
                                 Console.WriteLine($"{{result?.Memory}}");
                         }
                     }
                     """;
-                context.AddSource($"{name}PegParser.g.cs", output);
-            }
-        }
-
-        public void Initialize(GeneratorInitializationContext context)
-        {
+                sourceProductionContext.AddSource($"{pegFile.Name}PegParser.g.cs", output);
+            });
         }
     }
 }

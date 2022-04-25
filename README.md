@@ -1,5 +1,5 @@
 # PegLeg
-A PEG parser for C#, using code generators
+A PEG parser for C#, using incremental code generators
 
 # Goals
 
