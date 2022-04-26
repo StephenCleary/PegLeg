@@ -13,7 +13,7 @@ State is a way for PEG grammars to extend just a bit into contextual grammars.
 
 ## Problems with state
 
-- Arbitrary state modifications (e.g., from an oracle, or even from the same state) can cause infinite left-recursion.
+- Arbitrary state modifications (e.g., from an oracle, or even from the same state) can [cause infinite left-recursion](https://github.com/otac0n/Pegasus/issues/54).
 - Global state can cause performance problems, exploding the memoizing cache while also preventing the cache benefits. This can result in exponential time and space, even on non-pathological inputs.
 
 E.g., Pegasus has both problems, as it allows arbitrary state modification.
