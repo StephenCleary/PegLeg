@@ -7,6 +7,7 @@ A PEG parser for C#, using incremental code generators
 - Work exclusively on `ReadOnlyMemory<char>` instead of strings and substrings.
 - Implementation as a code generator: consumers define a `.peg` file and we generate the parser code on build with full cross-platform support.
 - Be reasonably efficient, both in terms of memory usage and execution speed.
+  - UTF8 support, if reasonably possible.
 
 ## Doc links
 
