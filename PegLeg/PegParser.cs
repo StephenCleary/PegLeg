@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PegLeg.Runtime;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -9,11 +10,11 @@ namespace PegLeg
 {
     public sealed class PegParser
     {
-        public ParseResult? TryParse(ReadOnlyMemory<char> input)
+        public ParseResult? TryParse(Substring input)
         {
             return Identifier(input);
 
-            ParseResult? Identifier(ReadOnlyMemory<char> input)
+            ParseResult? Identifier(Substring input)
             {
                 // (LowercaseLetter / UppercaseLetter / Underscore) (LowercaseLetter / UppercaseLetter / Underscore / Digit)*
                 var firstLetter = Choice(LowercaseLetter, UppercaseLetter, Underscore);
@@ -21,13 +22,13 @@ namespace PegLeg
                 return Sequence(firstLetter, otherLetters)(input);
             }
 
-            ParseResult? LowercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('a', 'z')(input);
-            ParseResult? UppercaseLetter(ReadOnlyMemory<char> input) => CharacterRange('A', 'Z')(input);
-            ParseResult? Digit(ReadOnlyMemory<char> input) => CharacterRange('0', '9')(input);
-            ParseResult? Underscore(ReadOnlyMemory<char> input) => ExactString("_", caseInsensitive: false)(input);
+            ParseResult? LowercaseLetter(Substring input) => CharacterRange('a', 'z')(input);
+            ParseResult? UppercaseLetter(Substring input) => CharacterRange('A', 'Z')(input);
+            ParseResult? Digit(Substring input) => CharacterRange('0', '9')(input);
+            ParseResult? Underscore(Substring input) => ExactString("_", caseInsensitive: false)(input);
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> PositiveLookahead(Func<ReadOnlyMemory<char>, ParseResult?> child)
+        private Func<Substring, ParseResult?> PositiveLookahead(Func<Substring, ParseResult?> child)
         {
             return input =>
             {
@@ -38,7 +39,7 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> NegativeLookahead(Func<ReadOnlyMemory<char>, ParseResult?> child)
+        private Func<Substring, ParseResult?> NegativeLookahead(Func<Substring, ParseResult?> child)
         {
             return input =>
             {
@@ -49,7 +50,7 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> Sequence(params Func<ReadOnlyMemory<char>, ParseResult?>[] children)
+        private Func<Substring, ParseResult?> Sequence(params Func<Substring, ParseResult?>[] children)
         {
             return input =>
             {
@@ -60,14 +61,14 @@ namespace PegLeg
                     var childResult = child(childInput);
                     if (childResult == null)
                         return ParseResult.Fail();
-                    offset += childResult.Value.Memory.Length;
+                    offset += childResult.Value.Substring.Length;
                 }
 
                 return ParseResult.Create(input, offset);
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> Optional(Func<ReadOnlyMemory<char>, ParseResult?> child)
+        private Func<Substring, ParseResult?> Optional(Func<Substring, ParseResult?> child)
         {
             return input =>
             {
@@ -79,9 +80,9 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> Plus(Func<ReadOnlyMemory<char>, ParseResult?> child) => Sequence(child, Star(child));
+        private Func<Substring, ParseResult?> Plus(Func<Substring, ParseResult?> child) => Sequence(child, Star(child));
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> Star(Func<ReadOnlyMemory<char>, ParseResult?> child)
+        private Func<Substring, ParseResult?> Star(Func<Substring, ParseResult?> child)
         {
             return input =>
             {
@@ -92,14 +93,14 @@ namespace PegLeg
                     var childResult = child(childInput);
                     if (childResult == null)
                         break;
-                    offset += childResult.Value.Memory.Length;
+                    offset += childResult.Value.Substring.Length;
                 }
 
                 return ParseResult.Create(input, offset);
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> Quantify(Func<ReadOnlyMemory<char>, ParseResult?> child, int min, int? inclusiveMax, Func<ReadOnlyMemory<char>, ParseResult?>? delimiter)
+        private Func<Substring, ParseResult?> Quantify(Func<Substring, ParseResult?> child, int min, int? inclusiveMax, Func<Substring, ParseResult?>? delimiter)
         {
             if (min == 0 && inclusiveMax == 1)
                 return Optional(child);
@@ -122,7 +123,7 @@ namespace PegLeg
                         var delimiterResult = delimiter(input.Slice(offset));
                         if (delimiterResult == null)
                             break;
-                        offset += delimiterResult.Value.Memory.Length;
+                        offset += delimiterResult.Value.Substring.Length;
                     }
 
                     var childInput = input.Slice(offset);
@@ -133,7 +134,7 @@ namespace PegLeg
                         break;
                     }
 
-                    offset += childResult.Value.Memory.Length;
+                    offset += childResult.Value.Substring.Length;
                 }
 
                 if (count < min)
@@ -143,7 +144,7 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> Choice(params Func<ReadOnlyMemory<char>, ParseResult?>[] options)
+        private Func<Substring, ParseResult?> Choice(params Func<Substring, ParseResult?>[] options)
         {
             return input =>
             {
@@ -158,7 +159,7 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> CharacterRange(char begin, char inclusiveEnd)
+        private Func<Substring, ParseResult?> CharacterRange(char begin, char inclusiveEnd)
         {
             return input =>
             {
@@ -172,7 +173,7 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> ExactString(string test, bool caseInsensitive)
+        private Func<Substring, ParseResult?> ExactString(string test, bool caseInsensitive)
         {
             var comparison = caseInsensitive ? StringComparison.InvariantCultureIgnoreCase : StringComparison.InvariantCulture;
             return input =>
@@ -186,7 +187,7 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> Regex(string test, RegexOptions options)
+        private Func<Substring, ParseResult?> Regex(string test, RegexOptions options)
         {
             var regex = new Regex($"^{test}", options);
             return input =>
@@ -199,7 +200,7 @@ namespace PegLeg
             };
         }
 
-        private Func<ReadOnlyMemory<char>, ParseResult?> AnyChar()
+        private Func<Substring, ParseResult?> AnyChar()
         {
             return input =>
             {
@@ -217,11 +218,11 @@ namespace PegLeg
 
         public readonly struct ParseResult
         {
-            public readonly ReadOnlyMemory<char> Memory { get; init; }
+            public readonly Substring Substring { get; init; }
 
             public static ParseResult? Fail() => null;
-            public static ParseResult Create(ReadOnlyMemory<char> memory, int length) => new() { Memory = memory.Slice(0, length) };
-            public static ParseResult Empty(ReadOnlyMemory<char> memory) => Create(memory, 0);
+            public static ParseResult Create(Substring substring, int length) => new() { Substring = substring.Slice(0, length) };
+            public static ParseResult Empty(Substring substring) => Create(substring, 0);
         }
 
         public readonly struct ParseResult<T>

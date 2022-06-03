@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using PegLeg.Runtime;
 using System;
 using System.IO;
 using System.Linq;
@@ -17,23 +18,30 @@ namespace PegLeg
 
             context.RegisterSourceOutput(pegFiles, (sourceProductionContext, pegFile) =>
             {
-                var parser = new PegParser();
-                var result = parser.TryParse(pegFile.Contents!.ToString().AsMemory());
-                var @namespace = "Test";
-                var output = $$"""
-                    // Auto-generated code
-                    using System;
+                try
+                {
+                    var parser = new PegParser();
+                    var result = parser.TryParse(new Substring(pegFile.Contents!.ToString()));
+                    var @namespace = "Test";
+                    var output = $$"""
+                            // Auto-generated code
+                            using System;
 
-                    namespace {{@namespace}}
-                    {
-                        public static partial class {{pegFile.Name}}PegParser
-                        {
-                            static public void HelloFrom(string name) =>
-                                Console.WriteLine($"{{result?.Memory}}");
-                        }
-                    }
-                    """;
-                sourceProductionContext.AddSource($"{pegFile.Name}PegParser.g.cs", output);
+                            namespace {{@namespace}}
+                            {
+                                public static partial class {{pegFile.Name}}PegParser
+                                {
+                                    static public void HelloFrom(string name) =>
+                                        Console.WriteLine($"{{result?.Substring}}");
+                                }
+                            }
+                            """;
+                    sourceProductionContext.AddSource($"{pegFile.Name}PegParser.g.cs", output);
+                }
+                catch (Exception ex)
+                {
+                    sourceProductionContext.AddSource($"{pegFile.Name}Error.txt", ex.ToString());
+                }
             });
         }
     }
